@@ -1,3 +1,8 @@
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authorization;
+using WebAppSecurity.Authorization;
+
 namespace WebAppSecurity
 {
     public class Program
@@ -9,7 +14,12 @@ namespace WebAppSecurity
             // Add services to the container.
             builder.Services.AddRazorPages();
 
-            builder.Services.AddAuthentication("MyAuthCookie").AddCookie("MyAuthCookie");
+            builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+                .AddCookie(CookieAuthenticationDefaults.AuthenticationScheme, options => {
+                    options.Cookie.Name = "MyAuthCookie";
+                    options.ExpireTimeSpan = TimeSpan.FromMinutes(2);
+                
+                });
 
             builder.Services.AddAuthorization(options =>
             {
@@ -18,9 +28,13 @@ namespace WebAppSecurity
 
                 options.AddPolicy("HRManager", policy => policy
                         .RequireClaim("HR", "true")
-                        .RequireClaim("Manager"));
+                        .RequireClaim("Manager")
+                        .Requirements.Add(new HRManagerProbationRequirement(3)));
+                        
 
             });
+
+            builder.Services.AddSingleton<IAuthorizationHandler, HRManagerProbationRequirementHandler>();
 
             var app = builder.Build();
 
